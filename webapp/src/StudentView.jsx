@@ -12,11 +12,11 @@ const StudentView = props => {
 
   const handleJoinQueue = () => {
     const msg = { type: "action", action: "add", value: user };
-    props.ws.send(JSON.stringify(msg));
+    props.wsSend(JSON.stringify(msg));
   };
   const handleLeaveQueue = () => {
     const msg = { type: "action", action: "remove", value: user };
-    props.ws.send(JSON.stringify(msg));
+    props.wsSend(JSON.stringify(msg));
   };
 
   return (

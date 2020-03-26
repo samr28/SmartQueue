@@ -13,7 +13,36 @@ let queue = [
   { uid: 69, name: "Jane", ws: null }
 ];
 
+const WEBSOCKET_PING_TIME = 40000;
+// const WEBSOCKET_PING_TIME = 5000;
+
+const genRandID = () => {
+  // Rand number
+  return Math.floor(Math.random() * 1000000);
+};
+
+let sentPings = [];
+
+let pingMsg = { type: "ping", timestamp: new Date() };
+const pingClient = client => {
+  pingMsg.id = client.id;
+  console.log(`   Ping sent: ${pingMsg.id}`);
+  client.send(JSON.stringify(pingMsg));
+};
+
+const clientKeepAlive = client => {
+  setTimeout(() => {
+    if (client.readyState === WebSocket.CLOSED) {
+      return;
+    }
+    pingClient(client);
+    clientKeepAlive(client);
+  }, WEBSOCKET_PING_TIME);
+};
+
 wss.on("connection", function connection(ws) {
+  ws.id = genRandID();
+  console.log(`New Connection - ${ws.id} (${wss.clients.size} total connections)`);
   const sendQueue = client => {
     let queueCopy = [];
     queue.forEach(item => {
@@ -40,7 +69,7 @@ wss.on("connection", function connection(ws) {
       if (msg.action == "add") {
         const user = msg.value;
         if (!queue.some(u => u.uid == user.uid)) {
-          console.log("+ " + user.name);
+          console.log(`+ ${user.name}(${user.uid})`);
           user.ws = ws;
           queue.push(user);
           wss.clients.forEach(sendQueue);
@@ -50,7 +79,7 @@ wss.on("connection", function connection(ws) {
       } else if (msg.action == "remove") {
         const user = msg.value;
         if (queue.some(u => u.uid == user.uid)) {
-          console.log("- " + user.name);
+          console.log(`- ${user.name}(${user.uid})`);
           // Remove from queue
           for (let i = 0; i < queue.length; i++) {
             if (queue[i].uid == user.uid) {
@@ -63,11 +92,18 @@ wss.on("connection", function connection(ws) {
       } else if (msg.action == "sendnotif") {
         const user = msg.value;
         const { notifContent } = msg;
-        console.log("* " + user.name);
+        console.log(`* ${user.name}(${user.uid})`);
         notifyUser(user, notifContent);
+      }
+    } else if (msg.type == "pingres") {
+      console.log(`   Ping res:  ${msg.id}`);
+    } else if (msg.type === "request") {
+      if (msg.value === "queue") {
+        sendQueue(ws);
       }
     }
   });
   // Send queue
   sendQueue(ws);
+  clientKeepAlive(ws);
 });

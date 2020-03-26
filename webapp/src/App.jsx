@@ -6,7 +6,8 @@ import Cookies from "js-cookie";
 import TAView from "./TAView";
 import StudentView from "./StudentView";
 
-const ws = new WebSocket("ws://localhost:8888/");
+let ws = new WebSocket("ws://localhost:8888/");
+const WS_RETRY_TIME = 5000;
 
 const DEFAULT_USER = { uid: -1, name: "No Name Provided" };
 
@@ -20,23 +21,38 @@ function App() {
     return Math.floor(Math.random() * 1000);
   };
 
-  useEffect(() => {
-    if (!Cookies.get("user")) {
-      Cookies.set(
-        "user",
-        { uid: genRandID(), name: DEFAULT_USER.name },
-        { expires: 7 }
-      );
-    }
-    setUser(JSON.parse(Cookies.get("user")));
+  const wsReconnect = () => {
+    setTimeout(() => {
+      console.log("WS - attempt reconnect");
+      if (ws.readyState === WebSocket.CLOSED) {
+        ws = new WebSocket("ws://localhost:8888/");
+        if (ws.readyState !== WebSocket.OPEN) {
+          console.log("WS - failed reconnect");
+          wsReconnect();
+        } else {
+          console.log("WS - ssuccessfully connected");
+        }
+      } else if (ws.readyState === WebSocket.OPEN) {
+        console.log("WS - successfully connected, attaching handlers");
+        attachWSHandlers(ws);
+        ws.send(JSON.stringify({ type: "request", value: "queue" }));
+      }
+    }, WS_RETRY_TIME);
+  };
 
-    ws.addEventListener("open", function(event) {
+  const wsSend = msg => {
+    ws.send(msg);
+  };
+
+  const attachWSHandlers = client => {
+    client.addEventListener("open", function(event) {
       console.log("WS Open");
     });
-    ws.addEventListener("close", function(event) {
+    client.addEventListener("close", function(event) {
       console.log("WS Close");
+      wsReconnect();
     });
-    ws.addEventListener("message", function(event) {
+    client.addEventListener("message", function(event) {
       const msg = JSON.parse(event.data);
       console.log("\\/ WS MSG \\/");
       console.log(event);
@@ -50,11 +66,29 @@ function App() {
           setUsers(newUsers);
         }
       } else if (msg.type === "notification") {
-        console.log(msg);
         setNotifContent(msg.notifContent);
         setNotification(true);
+      } else if (msg.type === "ping") {
+        let pingMsgResp = JSON.stringify({
+          type: "pingres",
+          timestamp: new Date(),
+          id: msg.id
+        });
+        ws.send(pingMsgResp);
       }
     });
+  };
+
+  useEffect(() => {
+    if (!Cookies.get("user")) {
+      Cookies.set(
+        "user",
+        { uid: genRandID(), name: DEFAULT_USER.name },
+        { expires: 7 }
+      );
+    }
+    setUser(JSON.parse(Cookies.get("user")));
+    attachWSHandlers(ws);
   }, []);
 
   const handleNotificationShow = () => {
@@ -111,7 +145,7 @@ function App() {
               user={user}
               users={users}
               userUpdateFunction={updateUser}
-              ws={ws}
+              wsSend={wsSend}
             />
           </Route>
         </Switch>

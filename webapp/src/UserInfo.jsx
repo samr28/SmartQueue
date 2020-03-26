@@ -10,17 +10,19 @@ const UserInfo = props => {
     setUserName(event.target.value);
   };
 
+  const save = () => {
+    const newUser = {};
+    Object.assign(newUser, props.user);
+    newUser.name = userName;
+    props.updateFunction(newUser);
+    setIsEdit(false);
+  };
+
   return (
     <div>
       {!isEdit && (
-        <h4>
-          {props.user.name} (uid: {props.user.uid}){" "}
-          <Edit
-            onClick={() => {
-              setIsEdit(true);
-            }}
-            fontSize="small"
-          />
+        <h4 onClick={() => setIsEdit(true)}>
+          {props.user.name} (uid: {props.user.uid}) <Edit fontSize="small" />
         </h4>
       )}
       {isEdit && (
@@ -28,19 +30,12 @@ const UserInfo = props => {
           <TextField
             value={userName === props.defaultUser.name ? "" : userName}
             onChange={handleTextboxUpdate}
+            onBlur={save}
             label="Name"
             variant="outlined"
             size="small"
           />
-          <Check
-            onClick={() => {
-              const newUser = {};
-              Object.assign(newUser, props.user);
-              newUser.name = userName;
-              props.updateFunction(newUser);
-              setIsEdit(false);
-            }}
-          />
+          <Check onClick={save} />
         </div>
       )}
     </div>
