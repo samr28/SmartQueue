@@ -9,7 +9,7 @@ const TAView = props => {
 
   const handleTextboxUpdate = event => {
     setMeetingLink(event.target.value);
-    Cookies.set("ta", { meetingLink: meetingLink });
+    Cookies.set("ta", { meetingLink: meetingLink }, { expires: 7 });
   };
 
   const notifyFunction = user => {
@@ -17,7 +17,7 @@ const TAView = props => {
       title: props.user.name + " is ready to help you",
       body: "Click here to open the videochat",
       link: meetingLink
-    }
+    };
     const msg = {
       type: "action",
       action: "sendnotif",

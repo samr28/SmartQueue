@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { BrowserRouter as Router, Route, Switch } from "react-router-dom";
 import Cookies from "js-cookie";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 import TAView from "./TAView";
 import StudentView from "./StudentView";
 
 let ws = new WebSocket("ws://localhost:8888/");
 const WS_RETRY_TIME = 5000;
+
+toast.configure({ draggable: false, autoClose: 8000 });
 
 const DEFAULT_USER = { uid: -1, name: "No Name Provided" };
 
@@ -42,18 +46,6 @@ function App() {
 
   const wsSend = msg => {
     ws.send(msg);
-  };
-
-  const updateID = () => {
-    console.log("updateid");
-    console.log(user);
-    console.log(Cookies.get("user"));
-    ws.send(
-      JSON.stringify({
-        type: "updateid",
-        uid: JSON.stringify(JSON.parse(Cookies.get("user")).uid)
-      })
-    );
   };
 
   const attachWSHandlers = client => {
@@ -93,6 +85,7 @@ function App() {
           console.log("Notif click, goto: " + notifContent.link);
           window.open(notifContent.link, "_blank");
         };
+        toast.success(notifContent.title);
       } else if (msg.type === "ping") {
         let pingMsgResp = JSON.stringify({
           type: "pingres",
@@ -128,9 +121,10 @@ function App() {
     setUser(JSON.parse(Cookies.get("user")));
     attachWSHandlers(ws);
     Notification.requestPermission().then(function(result) {
-      console.log("request perm");
-      console.log(result);
-      // TODO: handle if deny perms
+      console.log("Notif request perm: " + result);
+      if (result !== "granted") {
+        toast.error("Please allow notifications and refresh the page!");
+      }
     });
   }, []);
 
@@ -148,20 +142,6 @@ function App() {
 
   return (
     <div>
-      {/* {notification && notifContent && (
-        <Notification
-          title={notifContent.title || ""}
-          options={{ body: notifContent.body }}
-          timeout={10000}
-          ignore={notification && notifContent !== null}
-          askAgain={true}
-          onShow={handleNotificationShow}
-          onClick={handleNotificationClick}
-          onClose={handleNotificationClose}
-          onError={handleNotificationError}
-          onPermissionDenied={permDenied}
-        />
-      )} */}
       <Router>
         <Switch>
           <Route path="/ta">
