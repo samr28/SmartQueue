@@ -13,7 +13,7 @@
     "react-dom": "^16.13.1",
     "react-router-dom": "^5.1.2",
     "react-scripts": "3.4.1",
-    "react-web-notification": "^0.7.0",
+    "react-toastify": "^5.5.0",
     "ws": "^7.2.3"
   },
   "scripts": {

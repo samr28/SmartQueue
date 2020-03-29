@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { BrowserRouter as Router, Route, Switch } from "react-router-dom";
-import Notification from "react-web-notification";
 import Cookies from "js-cookie";
 
 import TAView from "./TAView";
@@ -14,8 +13,7 @@ const DEFAULT_USER = { uid: -1, name: "No Name Provided" };
 function App() {
   const [user, setUser] = useState();
   const [users, setUsers] = useState([]);
-  const [notification, setNotification] = useState(false);
-  const [notifContent, setNotifContent] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
 
   const genRandID = () => {
     return Math.floor(Math.random() * 1000);
@@ -35,6 +33,8 @@ function App() {
       } else if (ws.readyState === WebSocket.OPEN) {
         console.log("WS - successfully connected, attaching handlers");
         attachWSHandlers(ws);
+        // Set manually here because handlers weren't connected in time to catch open
+        setWsConnected(true);
         ws.send(JSON.stringify({ type: "request", value: "queue" }));
       }
     }, WS_RETRY_TIME);
@@ -44,12 +44,26 @@ function App() {
     ws.send(msg);
   };
 
+  const updateID = () => {
+    console.log("updateid");
+    console.log(user);
+    console.log(Cookies.get("user"));
+    ws.send(
+      JSON.stringify({
+        type: "updateid",
+        uid: JSON.stringify(JSON.parse(Cookies.get("user")).uid)
+      })
+    );
+  };
+
   const attachWSHandlers = client => {
     client.addEventListener("open", function(event) {
       console.log("WS Open");
+      setWsConnected(true);
     });
     client.addEventListener("close", function(event) {
       console.log("WS Close");
+      setWsConnected(false);
       wsReconnect();
     });
     client.addEventListener("message", function(event) {
@@ -66,8 +80,19 @@ function App() {
           setUsers(newUsers);
         }
       } else if (msg.type === "notification") {
-        setNotifContent(msg.notifContent);
-        setNotification(true);
+        // Check to make sure msg is correct
+        let notifContent = msg.notifContent;
+        if (!notifContent) {
+          console.log("Missing notifcontent");
+          return;
+        }
+        let n = new Notification(notifContent.title, {
+          body: notifContent.body || ""
+        });
+        n.onclick = () => {
+          console.log("Notif click, goto: " + notifContent.link);
+          window.open(notifContent.link, "_blank");
+        };
       } else if (msg.type === "ping") {
         let pingMsgResp = JSON.stringify({
           type: "pingres",
@@ -79,6 +104,19 @@ function App() {
     });
   };
 
+  // Update websocket record in backend
+  useEffect(() => {
+    // Make sure user is set and websocket is connected
+    if (user && wsConnected) {
+      ws.send(
+        JSON.stringify({
+          type: "updateid",
+          uid: user.uid
+        })
+      );
+    }
+  }, [user, wsConnected]);
+
   useEffect(() => {
     if (!Cookies.get("user")) {
       Cookies.set(
@@ -89,26 +127,12 @@ function App() {
     }
     setUser(JSON.parse(Cookies.get("user")));
     attachWSHandlers(ws);
+    Notification.requestPermission().then(function(result) {
+      console.log("request perm");
+      console.log(result);
+      // TODO: handle if deny perms
+    });
   }, []);
-
-  const handleNotificationShow = () => {
-    // Flip flag to remove component
-    setNotification(false);
-  };
-  const handleNotificationClick = () => {
-    // TODO: open webex
-    console.log("Clicked notification");
-    console.log(notifContent.link);
-    window.open(notifContent.link, "_blank");
-  };
-  const handleNotificationClose = () => {
-    // TODO: nothing I guess...
-    console.log("Notif closed");
-  };
-  const handleNotificationError = () => {
-    // TODO
-    console.log("Failed notification");
-  };
 
   /* TODO Notifications:
         - If device doesnt support notifications (prop: notSupported)
@@ -124,17 +148,20 @@ function App() {
 
   return (
     <div>
-      {notification && notifContent && (
+      {/* {notification && notifContent && (
         <Notification
           title={notifContent.title || ""}
           options={{ body: notifContent.body }}
           timeout={10000}
+          ignore={notification && notifContent !== null}
+          askAgain={true}
           onShow={handleNotificationShow}
           onClick={handleNotificationClick}
           onClose={handleNotificationClose}
           onError={handleNotificationError}
+          onPermissionDenied={permDenied}
         />
-      )}
+      )} */}
       <Router>
         <Switch>
           <Route path="/ta">

@@ -42,7 +42,7 @@ const clientKeepAlive = client => {
 
 wss.on("connection", ws => {
   ws.id = genRandID();
-  console.log(`New Connection - ${ws.id} (${wss.clients.size} total connections)`);
+  console.log(`Opened Connection - ${ws.id} (${wss.clients.size} total connections)`);
   const sendQueue = client => {
     let queueCopy = [];
     queue.forEach(item => {
@@ -105,6 +105,18 @@ wss.on("connection", ws => {
       if (msg.value === "queue") {
         sendQueue(ws);
       }
+    } else if (msg.type === "updateid") {
+      // debug variable/console output
+      let wasfound = false;
+      // Check if user is in queue
+      for (let i = 0; i < queue.length; i++) {
+        if (queue[i].uid === msg.uid) {
+          // Found user, update websocket
+          wasfound = true;
+          queue[i].ws = ws;
+        }
+      }
+      console.log(`└ Updateid ${msg.uid} (found: ${wasfound})`);
     }
   });
   // Send queue
