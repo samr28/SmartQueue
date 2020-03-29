@@ -40,7 +40,7 @@ const clientKeepAlive = client => {
   }, WEBSOCKET_PING_TIME);
 };
 
-wss.on("connection", function connection(ws) {
+wss.on("connection", ws => {
   ws.id = genRandID();
   console.log(`New Connection - ${ws.id} (${wss.clients.size} total connections)`);
   const sendQueue = client => {
@@ -63,7 +63,11 @@ wss.on("connection", function connection(ws) {
     });
   };
 
-  ws.on("message", function incoming(msg) {
+  ws.on("close", event => {
+    console.log(`Closed Connection - ${ws.id} (${wss.clients.size} total connections)`);
+  });
+
+  ws.on("message", msg => {
     msg = JSON.parse(msg);
     if (msg.type == "action") {
       if (msg.action == "add") {
