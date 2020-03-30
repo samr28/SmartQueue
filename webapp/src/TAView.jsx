@@ -3,14 +3,10 @@ import { Container, TextField } from "@material-ui/core";
 import Cookies from "js-cookie";
 
 import StudentList from "./StudentList";
+import FieldEditor from "./FieldEditor";
 
 const TAView = props => {
   const [meetingLink, setMeetingLink] = useState(null);
-
-  const handleTextboxUpdate = event => {
-    setMeetingLink(event.target.value);
-    Cookies.set("ta", { meetingLink: meetingLink }, { expires: 7 });
-  };
 
   const notifyFunction = user => {
     const notifContent = {
@@ -41,16 +37,26 @@ const TAView = props => {
       setMeetingLink(ta.meetingLink);
     }
   }, []);
+
+  useEffect(() => {
+    Cookies.set("ta", { meetingLink: meetingLink }, { expires: 7 });
+  }, [meetingLink]);
+
   return (
     <Container maxWidth="sm">
       <h1>2200 TA</h1>
-      <TextField
+      <FieldEditor
+        value={meetingLink}
+        label="Meeting link"
+        onSave={setMeetingLink}
+      />
+      {/* <TextField
         value={meetingLink || ""}
         onChange={handleTextboxUpdate}
         label="Meeting link"
         variant="outlined"
         size="small"
-      />
+      /> */}
       <StudentList
         users={props.users}
         admin={true}

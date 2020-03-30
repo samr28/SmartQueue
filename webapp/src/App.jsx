@@ -32,7 +32,7 @@ function App() {
           console.log("WS - failed reconnect");
           wsReconnect();
         } else {
-          console.log("WS - ssuccessfully connected");
+          console.log("WS - successfully connected");
         }
       } else if (ws.readyState === WebSocket.OPEN) {
         console.log("WS - successfully connected, attaching handlers");
@@ -60,9 +60,9 @@ function App() {
     });
     client.addEventListener("message", function(event) {
       const msg = JSON.parse(event.data);
-      console.log("\\/ WS MSG \\/");
+      // console.log("\\/ WS MSG \\/");
       console.log(event);
-      console.log("/\\ WS MSG /\\");
+      // console.log("/\\ WS MSG /\\");
       if (msg.type === "queue") {
         if (!Array.isArray(msg.value)) {
           console.log("WS ERROR: queue not array");
